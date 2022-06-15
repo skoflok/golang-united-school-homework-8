@@ -1,4 +1,4 @@
-package main
+package io_os_context
 
 import (
 	"bytes"
