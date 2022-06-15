@@ -89,8 +89,7 @@ func add(file *os.File, item string) (payload string, err error) {
 
 	for _, e := range elements {
 		if e.Id == element.Id {
-			err = errors.New("Item with id " + element.Id + " already exists")
-			return payload, err
+			return "Item with id " + element.Id + " already exists", nil
 		}
 	}
 
@@ -142,8 +141,6 @@ func parseArgs() (args Arguments) {
 	args["fileName"] = *fileNameArg
 	args["item"] = *itemArg
 	args["id"] = *idArg
-
-	fmt.Println(args)
 	return args
 }
 
@@ -175,7 +172,5 @@ func main() {
 	err := Perform(args, os.Stdout)
 	if err != nil {
 		panic(err)
-	} else {
-		fmt.Println(args)
 	}
 }
