@@ -87,6 +87,12 @@ func add(file *os.File, item string) (payload string, err error) {
 		return payload, err
 	}
 
+	for _, e := range elements {
+		if e.Id == element.Id {
+			return payload, errors.New("Item with id " + element.Id + " already exists")
+		}
+	}
+
 	elements = append(elements, element)
 
 	b, err := json.Marshal(elements)
