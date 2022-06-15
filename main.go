@@ -13,10 +13,10 @@ import (
 
 var allowedOperations = []string{"add", "list", "findById", "remove"}
 
-var id = flag.String("id", "", "Unique ID of the Item")
-var operation = flag.String("operation", "", "One of operation:"+strings.Join(allowedOperations, ","))
-var item = flag.String("item", "", "Item to add. Json string with id(string), email(string), age(integer) properties")
-var fileName = flag.String("fileName", "", "Path to file(storage)")
+var idArg = flag.String("id", "", "Unique ID of the Item")
+var operationArg = flag.String("operation", "", "One of operation:"+strings.Join(allowedOperations, ","))
+var itemArg = flag.String("item", "", "Item to add. Json string with id(string), email(string), age(integer) properties")
+var fileNameArg = flag.String("fileName", "", "Path to file(storage)")
 
 type Element struct {
 	Id    string `json:"id"`
@@ -122,18 +122,18 @@ func parseArgs() (args Arguments, err error) {
 
 	args = getDefaultArguments()
 
-	if err = prepareOperationArg(*operation); err != nil {
+	if err = prepareOperationArg(*operationArg); err != nil {
 		return args, err
 	}
-	args["operation"] = *operation
+	args["operation"] = *operationArg
 
-	if err = prepareFileNameArg(*fileName); err != nil {
+	if err = prepareFileNameArg(*fileNameArg); err != nil {
 		return args, err
 	}
 
-	args["fileName"] = *fileName
-	args["item"] = *item
-	args["id"] = *id
+	args["fileName"] = *fileNameArg
+	args["item"] = *itemArg
+	args["id"] = *idArg
 
 	fmt.Println(args)
 	return args, err
@@ -141,7 +141,7 @@ func parseArgs() (args Arguments, err error) {
 
 func prepareOperationArg(operation string) (err error) {
 	if operation == "" {
-		err = errors.New("operation flag has to be specified")
+		err = errors.New("-operation flag has to be specified")
 	}
 	return err
 }
