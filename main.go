@@ -54,7 +54,7 @@ func Perform(args Arguments, writer io.Writer) (err error) {
 		return fmt.Errorf("Operation " + args["operation"] + " not allowed!")
 	}
 
-	fmt.Println(payload)
+	writer.Write([]byte(payload))
 	return err
 }
 
