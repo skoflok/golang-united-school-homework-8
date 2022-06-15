@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 )
 
@@ -14,11 +18,94 @@ var operation = flag.String("operation", "", "One of operation:"+strings.Join(al
 var item = flag.String("item", "", "Item to add. Json string with id(string), email(string), age(integer) properties")
 var fileName = flag.String("fileName", "", "Path to file(storage)")
 
+type Element struct {
+	Id    string `json:"id"`
+	Email string `json:"email"`
+	Age   int    `json:"age"`
+}
+
 type Arguments map[string]string
 
-// func Perform(args Arguments, writer io.Writer) error {
+func Perform(args Arguments, writer io.Writer) (err error) {
+	var payload string
+	f, err := os.OpenFile(args["fileName"], os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		return fmt.Errorf("OpenFile error: %w", err)
+	}
+	defer f.Close()
 
-// }
+	switch args["operation"] {
+	case "list":
+		payload, err = list(f)
+	case "add":
+		payload, err = add(f, args["item"])
+	case "findById":
+	case "remove":
+	default:
+		return fmt.Errorf("Operation " + args["operation"] + " not allowed!")
+	}
+
+	fmt.Println(payload)
+	return err
+}
+
+func list(file *os.File) (payload string, err error) {
+	elements, err := readElementsFromFile(file)
+	if err != nil {
+		return payload, err
+	}
+
+	b, err := json.Marshal(elements)
+	if err != nil {
+		return payload, err
+	}
+	return string(b), err
+}
+
+func add(file *os.File, item string) (payload string, err error) {
+
+	if err = prepareitemArg(item); err != nil {
+		return "", err
+	}
+
+	element := Element{}
+	if err = json.Unmarshal([]byte(item), &element); err != nil {
+		return "", err
+	}
+
+	elements, err := readElementsFromFile(file)
+	if err != nil {
+		return payload, err
+	}
+
+	elements = append(elements, element)
+
+	b, err := json.Marshal(elements)
+	if err != nil {
+		return payload, err
+	}
+
+	if _, err = file.WriteAt(b, 0); err != nil {
+		return payload, err
+	}
+	return string(b), err
+}
+
+func readElementsFromFile(file *os.File) (elements []Element, err error) {
+
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(file)
+
+	if err != nil {
+		return elements, fmt.Errorf("Read from file to buffer error: %w", err)
+	}
+
+	content := buf.Bytes()
+	if err = json.Unmarshal(content, &elements); err != nil {
+		return elements, err
+	}
+	return elements, nil
+}
 
 func getDefaultArguments() Arguments {
 	args := Arguments{
@@ -43,26 +130,19 @@ func parseArgs() (args Arguments, err error) {
 	if err = prepareFileNameArg(*fileName); err != nil {
 		return args, err
 	}
+
 	args["fileName"] = *fileName
+	args["item"] = *item
+	args["id"] = *id
+
+	fmt.Println(args)
 	return args, err
 }
 
 func prepareOperationArg(operation string) (err error) {
-	allowed := false
-
 	if operation == "" {
 		err = errors.New("operation flag has to be specified")
 	}
-	for _, v := range allowedOperations {
-		if v == operation {
-			allowed = true
-		}
-	}
-
-	if !allowed {
-		err = errors.New("Operation " + operation + " not allowed!")
-	}
-
 	return err
 }
 
@@ -73,18 +153,25 @@ func prepareFileNameArg(fileName string) (err error) {
 	return err
 }
 
+func prepareitemArg(item string) (err error) {
+	if item == "" {
+		err = errors.New("-item flag has to be specified")
+	}
+	return err
+}
+
 func main() {
 
-	_, err := parseArgs()
+	args, err := parseArgs()
 
 	if err != nil {
 		panic(err)
 	}
 
-	// err := Perform(parseArgs(), os.Stdout)
+	err = Perform(args, os.Stdout)
 	if err != nil {
 		panic(err)
 	} else {
-		fmt.Println("Some")
+		fmt.Println(args)
 	}
 }
