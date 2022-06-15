@@ -28,6 +28,15 @@ type Arguments map[string]string
 
 func Perform(args Arguments, writer io.Writer) (err error) {
 	var payload string
+
+	if err = prepareOperationArg(args["operation"]); err != nil {
+		return err
+	}
+
+	if err = prepareFileNameArg(args["fileName"]); err != nil {
+		return err
+	}
+
 	f, err := os.OpenFile(args["fileName"], os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		return fmt.Errorf("OpenFile error: %w", err)
@@ -117,26 +126,18 @@ func getDefaultArguments() Arguments {
 	return args
 }
 
-func parseArgs() (args Arguments, err error) {
+func parseArgs() (args Arguments) {
 	flag.Parse()
 
 	args = getDefaultArguments()
 
-	if err = prepareOperationArg(*operationArg); err != nil {
-		return args, err
-	}
 	args["operation"] = *operationArg
-
-	if err = prepareFileNameArg(*fileNameArg); err != nil {
-		return args, err
-	}
-
 	args["fileName"] = *fileNameArg
 	args["item"] = *itemArg
 	args["id"] = *idArg
 
 	fmt.Println(args)
-	return args, err
+	return args
 }
 
 func prepareOperationArg(operation string) (err error) {
@@ -162,13 +163,9 @@ func prepareitemArg(item string) (err error) {
 
 func main() {
 
-	args, err := parseArgs()
+	args := parseArgs()
 
-	if err != nil {
-		panic(err)
-	}
-
-	err = Perform(args, os.Stdout)
+	err := Perform(args, os.Stdout)
 	if err != nil {
 		panic(err)
 	} else {
