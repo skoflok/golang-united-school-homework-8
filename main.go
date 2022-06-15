@@ -89,7 +89,8 @@ func add(file *os.File, item string) (payload string, err error) {
 
 	for _, e := range elements {
 		if e.Id == element.Id {
-			return payload, errors.New("Item with id " + element.Id + " already exists")
+			err = errors.New("Item with id " + element.Id + " already exists")
+			return payload, err
 		}
 	}
 
