@@ -91,7 +91,8 @@ func findById(file *os.File, id string) (payload string, err error) {
 
 	element, ok := getElementsById(elements, id)
 	if !ok {
-		return "Item with id " + id + " not found", err
+		// return "Item with id " + id + " not found", err
+		return "", err
 	}
 
 	b, err := json.Marshal(element)
