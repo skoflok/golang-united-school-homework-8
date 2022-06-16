@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-var allowedOperations = []string{"add", "list", "findById", "remove"}
+var allowedOperations = []string{"add", "list", "findById", "remove", "info"}
 
 var idArg = flag.String("id", "", "Unique ID of the Item")
 var operationArg = flag.String("operation", "", "One of operation:"+strings.Join(allowedOperations, ","))
@@ -43,12 +43,23 @@ func Perform(args Arguments, writer io.Writer) (err error) {
 	}
 	defer f.Close()
 
+	filesize, err := fsize(f)
+
+	if err != nil {
+		return fmt.Errorf("FileStat Error: %w", err)
+	}
+
+	if filesize == 0 {
+		f.WriteAt([]byte("[]"), 0)
+	}
+
 	switch args["operation"] {
 	case "list":
 		payload, err = list(f)
 	case "add":
 		payload, err = add(f, args["item"])
 	case "findById":
+		payload, err = findById(f, args["id"])
 	case "remove":
 	default:
 		return fmt.Errorf("Operation " + args["operation"] + " not allowed!")
@@ -56,6 +67,47 @@ func Perform(args Arguments, writer io.Writer) (err error) {
 
 	writer.Write([]byte(payload))
 	return err
+}
+
+func fsize(file *os.File) (size int64, err error) {
+	stat, err := file.Stat()
+	if err != nil {
+		return size, err
+	}
+
+	size = stat.Size()
+	return size, err
+}
+
+func findById(file *os.File, id string) (payload string, err error) {
+	if err = prepareIdArg(id); err != nil {
+		return payload, err
+	}
+
+	elements, err := readElementsFromFile(file)
+	if err != nil {
+		return payload, err
+	}
+
+	element, ok := getElementsById(elements, id)
+	if !ok {
+		return "Item with id " + id + " not found", err
+	}
+
+	b, err := json.Marshal(element)
+	if err != nil {
+		return payload, err
+	}
+	return string(b), err
+}
+
+func getElementsById(elements []Element, id string) (element Element, ok bool) {
+	for _, e := range elements {
+		if e.Id == id {
+			return e, true
+		}
+	}
+	return element, false
 }
 
 func list(file *os.File) (payload string, err error) {
@@ -147,6 +199,13 @@ func parseArgs() (args Arguments) {
 func prepareOperationArg(operation string) (err error) {
 	if operation == "" {
 		err = errors.New("-operation flag has to be specified")
+	}
+	return err
+}
+
+func prepareIdArg(id string) (err error) {
+	if id == "" {
+		err = errors.New("-id flag has to be specified")
 	}
 	return err
 }
