@@ -61,6 +61,7 @@ func Perform(args Arguments, writer io.Writer) (err error) {
 	case "findById":
 		payload, err = findById(f, args["id"])
 	case "remove":
+		payload, err = removeById(f, args["id"])
 	default:
 		return fmt.Errorf("Operation " + args["operation"] + " not allowed!")
 	}
@@ -89,7 +90,7 @@ func findById(file *os.File, id string) (payload string, err error) {
 		return payload, err
 	}
 
-	element, ok := getElementsById(elements, id)
+	element, _, ok := getElementsById(elements, id)
 	if !ok {
 		// return "Item with id " + id + " not found", err
 		return "", err
@@ -102,13 +103,34 @@ func findById(file *os.File, id string) (payload string, err error) {
 	return string(b), err
 }
 
-func getElementsById(elements []Element, id string) (element Element, ok bool) {
-	for _, e := range elements {
+func removeById(file *os.File, id string) (payload string, err error) {
+	if err = prepareIdArg(id); err != nil {
+		return payload, err
+	}
+
+	elements, err := readElementsFromFile(file)
+	if err != nil {
+		return payload, err
+	}
+
+	_, i, ok := getElementsById(elements, id)
+	if !ok {
+		return "Item with id " + id + " not found", err
+	}
+
+	elements = append(elements[:i], elements[i+1:]...)
+
+	b, err := writeElementsToFile(file, elements)
+	return string(b), err
+}
+
+func getElementsById(elements []Element, id string) (element Element, i int, ok bool) {
+	for i, e := range elements {
 		if e.Id == id {
-			return e, true
+			return e, i, true
 		}
 	}
-	return element, false
+	return element, 0, false
 }
 
 func list(file *os.File) (payload string, err error) {
@@ -148,15 +170,24 @@ func add(file *os.File, item string) (payload string, err error) {
 
 	elements = append(elements, element)
 
-	b, err := json.Marshal(elements)
+	b, err := writeElementsToFile(file, elements)
+	return string(b), err
+}
+
+func writeElementsToFile(file *os.File, elements []Element) (b []byte, err error) {
+	b, err = json.Marshal(elements)
 	if err != nil {
-		return payload, err
+		return b, err
+	}
+	if err = file.Truncate(0); err != nil {
+		return b, err
 	}
 
 	if _, err = file.WriteAt(b, 0); err != nil {
-		return payload, err
+		return b, err
 	}
-	return string(b), err
+
+	return b, nil
 }
 
 func readElementsFromFile(file *os.File) (elements []Element, err error) {
